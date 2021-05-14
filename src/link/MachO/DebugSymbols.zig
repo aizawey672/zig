@@ -467,7 +467,13 @@ pub fn flushModule(self: *DebugSymbols, allocator: *Allocator, options: link.Opt
         di_buf.appendAssumeCapacity(8); // address size
         // Write the form for the compile unit, which must match the abbrev table above.
         const name_strp = try self.makeDebugString(allocator, module.root_pkg.root_src_path);
-        const comp_dir_strp = try self.makeDebugString(allocator, module.root_pkg.root_src_directory.path orelse ".");
+        const comp_dir_strp = comp_dir_strp: {
+            const comp_dir = module.root_pkg.root_src_directory.path orelse ".";
+            var buffer: [fs.MAX_PATH_BYTES]u8 = undefined;
+            const full_path = try std.os.realpath(comp_dir, &buffer);
+            break :comp_dir_strp try self.makeDebugString(allocator, full_path);
+        };
+        // const comp_dir_strp = try self.makeDebugString(allocator, module.root_pkg.root_src_directory.path orelse "./");
         const producer_strp = try self.makeDebugString(allocator, link.producer_string);
         // Currently only one compilation unit is supported, so the address range is simply
         // identical to the main program header virtual address and memory size.
